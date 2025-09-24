@@ -1,60 +1,72 @@
 {
-  "name": "server",
-  "version": "1.0.0",
-  "description": "",
-  "main": "server.js",
-  "scripts": {
-    "test": "",
-    "start": "node src/server.js",
-    "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
-    "build": "tsc",
-    "docker:build": "docker compose up --build",
-    "docker:dev": "docker compose up -d --build",
-    "docker:up": "docker compose up -d",
-    "docker:down": "docker compose down",
-    "docker:logs": "docker compose logs -f",
-    "lint": "eslint . --ext .js,.ts",
-    "format": "prettier --write .",
-    "clean": "rm -rf dist",
-    "prepare": "husky"
-  },
-  "keywords": [
-    "node",
-    "server",
-    "typescript"
-  ],
-  "author": "Nikhil Harmalkar",
-  "license": "MIT",
-  "packageManager": "pnpm@10.13.1",
-  "dependencies": {
-    "@clerk/express": "^1.7.33",
-    "compression": "^1.8.1",
-    "cookie-parser": "^1.4.7",
-    "cors": "^2.8.5",
-    "dotenv": "^17.2.0",
-    "drizzle-orm": "^0.44.5",
-    "express": "^5.1.0",
-    "helmet": "^8.1.0",
-    "morgan": "^1.10.1",
-    "pg": "^8.16.3",
-    "pino": "^9.11.0",
-    "pino-pretty": "^13.1.1",
-    "zod": "^4.0.5"
-  },
-  "devDependencies": {
-    "@commitlint/cli": "^19.8.1",
-    "@commitlint/config-conventional": "^19.8.1",
-    "@types/compression": "^1.8.1",
-    "@types/cookie-parser": "^1.4.9",
-    "@types/cors": "^2.8.19",
-    "@types/express": "^5.0.3",
-    "@types/morgan": "^1.9.10",
-    "@types/node": "^24.1.0",
-    "@types/pg": "^8.15.5",
-    "drizzle-kit": "^0.31.4",
-    "husky": "^9.1.7",
-    "lint-staged": "12.3.2",
-    "ts-node-dev": "^2.0.0",
-    "typescript": "^5.8.3"
-  }
+    "name": "server",
+    "version": "1.0.0",
+    "description": "",
+    "main": "server.js",
+    "scripts": {
+        "test": "",
+        "lint:eslint": "eslint .",
+        "lint:fix": "eslint . --fix",
+        "start": "node src/server.js",
+        "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
+        "build": "tsc",
+        "docker:build": "docker compose up --build",
+        "docker:dev": "docker compose up -d --build",
+        "docker:up": "docker compose up -d",
+        "docker:down": "docker compose down",
+        "docker:logs": "docker compose logs -f",
+        "lint": "eslint . --ext .js,.ts",
+        "format": "prettier --write .",
+        "clean": "rm -rf dist",
+        "prepare": "husky"
+    },
+    "lint-staged": {
+        "*.ts": [
+            "pnpm run lint:fix",
+            "pnpm run format"
+        ]
+    },
+    "keywords": [
+        "node",
+        "server",
+        "typescript"
+    ],
+    "author": "Nikhil Harmalkar",
+    "license": "MIT",
+    "packageManager": "pnpm@10.13.1",
+    "dependencies": {
+        "@clerk/express": "^1.7.33",
+        "compression": "^1.8.1",
+        "cookie-parser": "^1.4.7",
+        "cors": "^2.8.5",
+        "dotenv": "^17.2.0",
+        "drizzle-orm": "^0.44.5",
+        "express": "^5.1.0",
+        "helmet": "^8.1.0",
+        "morgan": "^1.10.1",
+        "pg": "^8.16.3",
+        "pino": "^9.11.0",
+        "pino-pretty": "^13.1.1",
+        "zod": "^4.0.5"
+    },
+    "devDependencies": {
+        "@commitlint/cli": "^19.8.1",
+        "@commitlint/config-conventional": "^19.8.1",
+        "@eslint/js": "^9.36.0",
+        "@types/compression": "^1.8.1",
+        "@types/cookie-parser": "^1.4.9",
+        "@types/cors": "^2.8.19",
+        "@types/express": "^5.0.3",
+        "@types/morgan": "^1.9.10",
+        "@types/node": "^24.1.0",
+        "@types/pg": "^8.15.5",
+        "drizzle-kit": "^0.31.4",
+        "eslint": "^9.36.0",
+        "husky": "^9.1.7",
+        "lint-staged": "12.3.2",
+        "ts-node-dev": "^2.0.0",
+        "typescript": "^5.8.3",
+        "typescript-eslint": "^8.44.1"
+    }
 }
+
