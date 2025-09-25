@@ -1,7 +1,8 @@
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool, type PoolConfig } from 'pg'
-import { APP_CONFIG } from '../../config'
+import { APP_CONFIG } from '@/config'
 import * as schema from './schema'
+import { logger } from '@/config/logger'
 
 /**
  * Connection pool for managing PostgreSQL database connections.
@@ -28,7 +29,7 @@ const pool: Pool = new Pool(config)
 
 // Handle pool errors
 pool.on('error', (err) => {
-    console.error('Unexpected error on idle client', err)
+    logger.error(`Unexpected error on idle client: ${err?.message || err}`)
     process.exit(-1)
 })
 

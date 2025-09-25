@@ -1,36 +1,36 @@
-version: "3.9"
+version: '3.9'
 services:
-  db:
-    image: postgres:15
-    environment:
-      POSTGRES_USER: nikhil
-      POSTGRES_PASSWORD: root-admin
-      POSTGRES_DB: pikzee
-    ports:
-      - "5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
+    db:
+        image: postgres:15
+        environment:
+            POSTGRES_USER: nikhil
+            POSTGRES_PASSWORD: root-admin
+            POSTGRES_DB: pikzee
+        ports:
+            - '5432:5432'
+        volumes:
+            - pgdata:/var/lib/postgresql/data
 
-  # redis:
-  #   image: redis:7
-  #   ports:
-  #     - "6379:6379"
+    # redis:
+    #   image: redis:7
+    #   ports:
+    #     - "6379:6379"
 
-  # backend:
-  #   build:
-  #     context: ..
-  #     dockerfile: ./docker/Dockerfile.app
-  #   command: npm run dev
-  #   ports:
-  #     - "4000:4000"
-  #   volumes:
-  #     - ../server:/app
-  #   environment:
-  #     DATABASE_URL: postgres://nikhil:root-admin@db:5432/pikzee
-  #     CLERK_SECRET_KEY: ${CLERK_SECRET_KEY}
-  #   depends_on:
-  #     - db
-  #     - redis
+    # backend:
+    #   build:
+    #     context: ..
+    #     dockerfile: ./docker/Dockerfile.app
+    #   command: npm run dev
+    #   ports:
+    #     - "4000:4000"
+    #   volumes:
+    #     - ../server:/app
+    #   environment:
+    #     DATABASE_URL: postgres://nikhil:root-admin@db:5432/pikzee
+    #     CLERK_SECRET_KEY: ${CLERK_SECRET_KEY}
+    #   depends_on:
+    #     - db
+    #     - redis
 
 volumes:
-  pgdata:
+    pgdata:

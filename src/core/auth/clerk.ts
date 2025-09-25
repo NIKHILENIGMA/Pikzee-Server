@@ -1,3 +1,3 @@
-import { requireAuth } from "@clerk/express";
+import { requireAuth } from '@clerk/express'
 
-export const clerkAuth = requireAuth();
+export const clerkAuth = requireAuth()
