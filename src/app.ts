@@ -8,6 +8,7 @@ import cookieParser from 'cookie-parser'
 import compression from 'compression'
 import { router as routes } from './core/http/router'
 import { clerkMiddleware } from '@clerk/express'
+import 'source-map-support/register'
 
 const createApp = (): Application => {
     const app = express()
