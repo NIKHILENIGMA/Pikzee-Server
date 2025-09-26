@@ -21,9 +21,12 @@
         "format": "pnpm run format:fix",
         "clean": "rm -rf dist",
         "prepare": "husky",
-        "db:generate": "drizzle-kit generate",
-        "db:migrate": "drizzle-kit migrate",
-        "db:studio": "drizzle-kit studio"
+        "db:generate": "drizzle-kit generate --config=drizzle.config.ts",
+        "db:migrate": "drizzle-kit migrate --config=drizzle.config.ts",
+        "db:studio": "drizzle-kit studio --config=drizzle.config.ts",
+        "db:push": "drizzle-kit push --config=drizzle.config.ts",
+        "db:gen:migrate": "pnpm db:generate && pnpm db:migrate",
+        "db:dev": "pnpm db:push && pnpm db:studio"
     },
     "lint-staged": {
         "*.ts": [
@@ -41,6 +44,7 @@
     "packageManager": "pnpm@10.13.1",
     "dependencies": {
         "@clerk/express": "^1.7.33",
+        "body-parser": "^2.2.0",
         "compression": "^1.8.1",
         "cookie-parser": "^1.4.7",
         "cors": "^2.8.5",
@@ -53,12 +57,14 @@
         "pino": "^9.11.0",
         "pino-pretty": "^13.1.1",
         "source-map-support": "0.5.16",
+        "svix": "^1.76.1",
         "zod": "^4.0.5"
     },
     "devDependencies": {
         "@commitlint/cli": "^19.8.1",
         "@commitlint/config-conventional": "^19.8.1",
         "@eslint/js": "^9.36.0",
+        "@types/body-parser": "^1.19.6",
         "@types/compression": "^1.8.1",
         "@types/cookie-parser": "^1.4.9",
         "@types/cors": "^2.8.19",
@@ -82,3 +88,4 @@
         "typescript-eslint": "^8.44.1"
     }
 }
+
