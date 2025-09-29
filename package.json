@@ -27,7 +27,7 @@
         "db:push": "drizzle-kit push --config=drizzle.config.ts",
         "db:gen:migrate": "pnpm db:generate && pnpm db:migrate",
         "db:dev": "pnpm db:push && pnpm db:studio",
-        "db:clean": "rm -rf ./src/core/db/migrations/*"        
+        "db:clean": "rm -rf ./src/core/db/migrations/*"
     },
     "lint-staged": {
         "*.ts": [
@@ -89,4 +89,3 @@
         "typescript-eslint": "^8.44.1"
     }
 }
-
