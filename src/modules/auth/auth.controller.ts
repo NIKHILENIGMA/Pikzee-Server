@@ -47,6 +47,8 @@ export const onboardingUser = async (req: Request, res: Response) => {
 
             const createdUser = await db.insert(users).values(userDetails).returning()
 
+            logger.info(`✅ New user onboarded: ${JSON.stringify(createdUser[0])}`)
+
             return ApiResponse(req, res, 200, 'User onboarded successfully', createdUser[0])
         }
     } catch (err) {
