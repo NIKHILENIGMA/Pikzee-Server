@@ -54,6 +54,6 @@ export const onboardingUser = async (req: Request, res: Response) => {
         if (err instanceof StandardError) {
             throw err
         }
-        throw new InternalServerError('Webhook verification failed', 'WEBHOOK_VERIFICATION_FAILED')
+        throw new InternalServerError(`Webhook verification failed, reason might be: ${(err as Error)?.message}`, 'WEBHOOK_VERIFICATION_FAILED')
     }
 }
