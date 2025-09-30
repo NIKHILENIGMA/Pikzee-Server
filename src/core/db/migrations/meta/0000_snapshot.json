@@ -1,0 +1,186 @@
+{
+    "id": "2f4a4225-ca85-41da-b351-d8eee631c8e5",
+    "prevId": "00000000-0000-0000-0000-000000000000",
+    "version": "7",
+    "dialect": "postgresql",
+    "tables": {
+        "public.users": {
+            "name": "users",
+            "schema": "",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "varchar(100)",
+                    "primaryKey": true,
+                    "notNull": true
+                },
+                "first_name": {
+                    "name": "first_name",
+                    "type": "varchar(100)",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "last_name": {
+                    "name": "last_name",
+                    "type": "varchar(100)",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "email": {
+                    "name": "email",
+                    "type": "varchar(255)",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "avatar_image_url": {
+                    "name": "avatar_image_url",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "tier_id": {
+                    "name": "tier_id",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": 1
+                },
+                "created_at": {
+                    "name": "created_at",
+                    "type": "timestamp",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "updated_at": {
+                    "name": "updated_at",
+                    "type": "timestamp",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                }
+            },
+            "indexes": {},
+            "foreignKeys": {
+                "users_tier_id_tiers_id_fk": {
+                    "name": "users_tier_id_tiers_id_fk",
+                    "tableFrom": "users",
+                    "tableTo": "tiers",
+                    "columnsFrom": ["tier_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "no action",
+                    "onUpdate": "no action"
+                }
+            },
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {
+                "users_email_unique": {
+                    "name": "users_email_unique",
+                    "nullsNotDistinct": false,
+                    "columns": ["email"]
+                }
+            },
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
+        "public.tiers": {
+            "name": "tiers",
+            "schema": "",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "serial",
+                    "primaryKey": true,
+                    "notNull": true
+                },
+                "subscription_tier": {
+                    "name": "subscription_tier",
+                    "type": "subscription_name_enum",
+                    "typeSchema": "public",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "monthly_price": {
+                    "name": "monthly_price",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "yearly_price": {
+                    "name": "yearly_price",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "storage_limit_bytes": {
+                    "name": "storage_limit_bytes",
+                    "type": "bigint",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "file_upload_limit_bytes": {
+                    "name": "file_upload_limit_bytes",
+                    "type": "bigint",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "members_per_workspace_limit": {
+                    "name": "members_per_workspace_limit",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "projects_per_workspace_limit": {
+                    "name": "projects_per_workspace_limit",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "docs_per_workspace_limit": {
+                    "name": "docs_per_workspace_limit",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "drafts_per_doc_limit": {
+                    "name": "drafts_per_doc_limit",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "created_at": {
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                }
+            },
+            "indexes": {},
+            "foreignKeys": {},
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {},
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        }
+    },
+    "enums": {
+        "public.subscription_name_enum": {
+            "name": "subscription_name_enum",
+            "schema": "public",
+            "values": ["FREE", "PRO", "ENTERPRISE"]
+        }
+    },
+    "schemas": {},
+    "sequences": {},
+    "roles": {},
+    "policies": {},
+    "views": {},
+    "_meta": {
+        "columns": {},
+        "schemas": {},
+        "tables": {}
+    }
+}
