@@ -5,7 +5,7 @@ import { CLERK_WEBHOOK_SECRET } from '@/config/clerk'
 import type { WebhookEvent } from '@clerk/express'
 import { logger } from '@/config/logger'
 import { db } from '@/core/db'
-import { users } from '@/core/db/schema/users'
+import { users } from '@/core/db/schema/users.schema'
 
 export const onboardingUser = async (req: Request, res: Response) => {
     const svixId = req.headers['svix-id'] as string
@@ -39,7 +39,8 @@ export const onboardingUser = async (req: Request, res: Response) => {
                 firstName: first_name,
                 lastName: last_name,
                 email: primaryEmail,
-                avatarImage: image_url
+                avatarImage: image_url,
+                tierId: 1 // Default to Free tier
             }
 
             // For debugging purposes
