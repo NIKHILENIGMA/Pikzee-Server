@@ -27,7 +27,10 @@
         "db:push": "drizzle-kit push --config=drizzle.config.ts",
         "db:gen:migrate": "pnpm db:generate && pnpm db:migrate",
         "db:dev": "pnpm db:push && pnpm db:studio",
-        "db:clean": "rm -rf ./src/core/db/migrations/*"
+        "db:clean": "rm -rf ./src/core/db/migrations/*",
+        "db:seed": "ts-node ./scripts/seed.ts",
+        "db:seed:tiers": "ts-node -e \"require('dotenv/config'); require('./src/core/db/seeds/tiers.seed').seedTiers().then(() => process.exit(0)).catch(e => { console.error(e); process.exit(1); })\"",
+        "db:fresh": "pnpm db:migrate && pnpm db:seed"
     },
     "lint-staged": {
         "*.ts": [
