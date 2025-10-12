@@ -1,8 +1,10 @@
 import { Router } from 'express'
-import { workspaceRouter } from '@/modules/workspace/workspace.routes'
+import workspaceRouter from '@/modules/workspace/workspace.routes'
 import { authRouter } from '@/modules/auth'
 
-export const router = Router()
+const router = Router()
 
-router.use('/workspaces', workspaceRouter)
 router.use('/auth', authRouter)
+router.use('/workspaces', workspaceRouter)
+
+export default router
