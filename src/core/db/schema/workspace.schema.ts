@@ -17,7 +17,7 @@ export const workspaces = pgTable('workspaces', {
         .notNull()
         .references(() => users.id),
     currentStorageBytes: bigint('current_storage_bytes', { mode: 'number' }).notNull().default(0),
-    workspaceLogoUrl: text('workspace_logo_url'),
+    workspaceLogoUrl: text('workspace_logo_url').default(''),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 })
@@ -52,6 +52,8 @@ export const workspaceInvitations = pgTable('workspace_invitations', {
         .notNull()
         .references(() => workspaces.id, { onDelete: 'cascade' }),
     email: text('email').notNull(),
+    userId: text('user_id').references(() => users.id),
+    status: text('status').notNull().default('PENDING'), // PENDING, ACCEPTED, EXPIRED
     permission: text('permission').notNull().$type<(typeof permissionEnum)[number]>(),
     invitedBy: text('invited_by')
         .notNull()

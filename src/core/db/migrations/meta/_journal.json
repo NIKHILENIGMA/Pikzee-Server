@@ -8,6 +8,13 @@
             "when": 1759258050548,
             "tag": "0000_user-and-tier-schema",
             "breakpoints": true
+        },
+        {
+            "idx": 1,
+            "version": "7",
+            "when": 1760271409347,
+            "tag": "0001_workspace-management",
+            "breakpoints": true
         }
     ]
 }
