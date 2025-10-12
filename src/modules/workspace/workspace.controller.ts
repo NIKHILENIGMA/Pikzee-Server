@@ -5,7 +5,7 @@ import { Request, Response } from 'express'
 import { db } from '@/core/db'
 import { tiers, users } from '@/core/db/schema'
 import { AsyncHandler } from '@/core/http/asyncHandler'
-import { workspaceMembers, workspaces } from '@/core/db/schema/workspace.schema'
+import { workspaceMembers, workspaces } from '@/core/db/schema'
 
 import { ApiResponse, BadRequestError, NotFoundError, UnauthorizedError } from '@/util'
 import { ValidationService } from '../shared/validation.service'
