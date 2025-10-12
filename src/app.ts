@@ -9,7 +9,7 @@ import 'source-map-support/register'
 
 import { APP_CONFIG } from './config'
 import { authWebhookRouter } from './modules/auth'
-import { router as routes } from '@/core/http/router'
+import routes from '@/core/http/router'
 import { errorHandler, notFound } from '@/middlewares'
 
 const createApp = (): Application => {
