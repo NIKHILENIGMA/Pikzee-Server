@@ -11,6 +11,7 @@
         "dev": "nodemon src/server.ts",
         "build": "tsc -p . && tsc-alias",
         "build:prod": "tsc -p . --sourceMap false && tsc-alias",
+        "clean:dist": "rm -rf dist",
         "docker:build": "docker compose up --build",
         "docker:dev": "docker compose up -d --build",
         "docker:up": "docker compose up -d",
@@ -48,6 +49,7 @@
     "packageManager": "pnpm@10.13.1",
     "dependencies": {
         "@clerk/express": "^1.7.33",
+        "axios": "^1.12.2",
         "body-parser": "^2.2.0",
         "compression": "^1.8.1",
         "cookie-parser": "^1.4.7",
