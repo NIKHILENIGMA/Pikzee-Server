@@ -1,14 +1,17 @@
 import { getAuth } from '@clerk/express'
-import { and, eq } from 'drizzle-orm'
+import { and, eq, count } from 'drizzle-orm'
 import { Request, Response } from 'express'
 
 import { db } from '@/core/db'
+import { tiers, users } from '@/core/db/schema'
 import { AsyncHandler } from '@/core/http/asyncHandler'
 import { workspaceMembers, workspaces } from '@/core/db/schema/workspace.schema'
 
 import { ApiResponse, BadRequestError, NotFoundError, UnauthorizedError } from '@/util'
-import { tiers, users } from '@/core/db/schema'
-import { count } from 'drizzle-orm'
+import { ValidationService } from '../shared/validation.service'
+
+import { createWorkspaceSchema, updateWorkspaceSchema, WorkspaceIdSchema } from './workspace.schema'
+import { CreateWorkspaceBody } from './workspaces.types'
 
 // Creates a new workspace owned by the authenticated user. Each user can only create ONE workspace.
 export const createWorkspace = AsyncHandler(async (req: Request, res: Response): Promise<void> => {
@@ -17,13 +20,8 @@ export const createWorkspace = AsyncHandler(async (req: Request, res: Response):
         throw new UnauthorizedError('User not authenticated')
     }
 
-    // Extract and sanitize input
-    const { name } = req.body as { name: string }
-
-    // Validate input
-    if (!name || typeof name !== 'string' || name.length < 3 || name.length > 50) {
-        return ApiResponse(req, res, 400, 'Invalid workspace name', null)
-    }
+    // Validate request body
+    const { name }: CreateWorkspaceBody = ValidationService.validateBody(req.body, createWorkspaceSchema)
 
     // Check if the user already owns a workspace
     const [workspace] = await db.select().from(workspaces).where(eq(workspaces.ownerId, userId)).limit(1)
@@ -32,30 +30,35 @@ export const createWorkspace = AsyncHandler(async (req: Request, res: Response):
     }
 
     // Create the workspace
-    const [newWorkspace] = await db
-        .insert(workspaces)
-        .values({
-            name,
-            slug: name.toLowerCase().replace(/\s+/g, '-'),
-            ownerId: userId,
-            currentStorageBytes: 0
-        })
-        .returning({
-            id: workspaces.id,
-            name: workspaces.name,
-            slug: workspaces.slug,
-            ownerId: workspaces.ownerId,
-            currentStorageBytes: workspaces.currentStorageBytes
+    const newWorkspace = await db.transaction(async (tx) => {
+        const [workspace] = await tx
+            .insert(workspaces)
+            .values({
+                name: `${name}'s Workspace`,
+                slug: name.toLowerCase().replace(/\s+/g, '-'),
+                ownerId: userId,
+                workspaceLogoUrl: null,
+                currentStorageBytes: 0
+            })
+            .returning({
+                id: workspaces.id,
+                name: workspaces.name,
+                slug: workspaces.slug,
+                ownerId: workspaces.ownerId,
+                currentStorageBytes: workspaces.currentStorageBytes
+            })
+
+        // Add the owner as a member with full access
+        await tx.insert(workspaceMembers).values({
+            workspaceId: workspace.id,
+            userId: userId,
+            permission: 'FULL_ACCESS'
         })
 
-    // Add the owner as a member with full access
-    await db.insert(workspaceMembers).values({
-        workspaceId: newWorkspace.id,
-        userId: userId,
-        permission: 'FULL_ACCESS'
+        return workspace
     })
 
-    return ApiResponse(req, res, 200, 'Create Workspace - Not Implemented', newWorkspace)
+    return ApiResponse(req, res, 201, 'Workspace created successfully', newWorkspace)
 })
 
 // Retrieves all workspaces where the user is owner or member.
@@ -88,92 +91,68 @@ export const getUserWorkspaces = AsyncHandler(async (req: Request, res: Response
 
 // Retrieves detailed information about a specific workspace.
 export const getWorkspaceById = AsyncHandler(async (req: Request, res: Response): Promise<void> => {
-    // - Validates user has access to workspace (owner or member)
-    // - Queries workspace with owner information
-    // - Includes member count and storage usage
-    // - Returns workspace object with metadata
-
     const { userId } = getAuth(req)
     if (!userId) {
         throw new UnauthorizedError('User not authenticated')
     }
 
-    const { workspaceId } = req.params as { workspaceId: string }
-    if (!workspaceId || typeof workspaceId !== 'string') {
-        throw new BadRequestError('Invalid workspace ID')
-    }
+    const { workspaceId } = ValidationService.validateParams(req.params, WorkspaceIdSchema)
 
-    const [workspaceData] = await db
+    const [membership] = await db
         .select({
-            id: workspaces.id,
-            name: workspaces.name,
-            slug: workspaces.slug,
-            ownerId: workspaces.ownerId,
-            workspaceLogo: workspaces.workspaceLogoUrl,
-            currentStorageBytes: workspaces.currentStorageBytes,
             permission: workspaceMembers.permission,
-            createdAt: workspaces.createdAt,
-
-            // owner info
-            ownerFirstName: users.firstName,
-            ownerLastName: users.lastName,
-            ownerEmail: users.email,
-            ownerProfileImageUrl: users.avatarImage,
-
-            // User's permission level
-            userPermission: workspaceMembers.permission,
-            useJoinedAt: workspaceMembers.joinedAt
+            joinedAt: workspaceMembers.joinedAt
         })
-        .from(workspaces)
-        .innerJoin(workspaceMembers, eq(workspaces.id, workspaceMembers.workspaceId))
-        .innerJoin(users, eq(workspaces.ownerId, users.id))
-        .where(and(eq(workspaces.id, workspaceId), eq(workspaceMembers.userId, userId)))
+        .from(workspaceMembers)
+        .where(and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.userId, userId)))
         .limit(1)
 
-    if (!workspaceData) {
+    if (!membership) {
         throw new UnauthorizedError('Access denied: You are not a member of this workspace')
     }
 
-    const [memberCount] = await db
+    // Check if the user is a member of the workspace
+    const [workspaceData] = await db
         .select({
-            count: count(workspaceMembers.id)
+            workspace: {
+                id: workspaces.id,
+                name: workspaces.name,
+                slug: workspaces.slug,
+                ownerId: workspaces.ownerId,
+                workspaceLogo: workspaces.workspaceLogoUrl,
+                createdAt: workspaces.createdAt
+            },
+            owner: {
+                id: users.id,
+                firstName: users.firstName,
+                lastName: users.lastName,
+                email: users.email,
+                avatar: users.avatarImage
+            }
+        })
+        .from(workspaces)
+        .innerJoin(users, eq(workspaces.ownerId, users.id))
+        .where(eq(workspaces.id, workspaceId))
+        .limit(1)
+
+    if (!workspaceData) {
+        throw new NotFoundError('Workspace not found')
+    }
+
+    const [membersCountRow] = await db
+        .select({
+            noOfMembers: count(workspaceMembers.id)
         })
         .from(workspaceMembers)
         .where(eq(workspaceMembers.workspaceId, workspaceId))
 
-    const [userTier] = await db
-        .select({
-            storageLimitBytes: tiers.storageLimitBytes
-        })
-        .from(users)
-        .innerJoin(tiers, eq(users.tierId, tiers.id))
-        .where(eq(users.id, userId))
+    const noOfMembers = Number(membersCountRow?.noOfMembers ?? 0)
 
     const workspaceResponse = {
-        workspace: {
-            id: workspaceData.id,
-            name: workspaceData.name,
-            slug: workspaceData.slug,
-            logo: workspaceData.workspaceLogo,
-            createdAt: workspaceData.createdAt
-        },
-        owner: {
-            id: workspaceData.ownerId,
-            firstName: workspaceData.ownerFirstName,
-            lastName: workspaceData.ownerLastName,
-            email: workspaceData.ownerEmail,
-            avatar: workspaceData.ownerProfileImageUrl
-        },
-        userAccess: {
-            permission: workspaceData.userPermission,
-            joinedAt: workspaceData.useJoinedAt,
-            isOwner: workspaceData.ownerId === userId
-        },
-        stats: {
-            memberCount: memberCount.count || 0,
-            currentStorageBytes: workspaceData.currentStorageBytes,
-            storageLimitBytes: userTier ? userTier.storageLimitBytes : 0
-        }
+        workspace: workspaceData.workspace,
+        owner: workspaceData.owner,
+        numberOfMembers: noOfMembers,
+        memeberShip: membership.permission
     }
 
     return ApiResponse(req, res, 200, 'Workspace retrieved successfully', workspaceResponse)
@@ -185,16 +164,9 @@ export const updateWorkspace = AsyncHandler(async (req: Request, res: Response):
     if (!userId) {
         throw new UnauthorizedError('User not authenticated')
     }
+    const { workspaceId } = ValidationService.validateParams(req.params, WorkspaceIdSchema)
 
-    const { workspaceId } = req.params as { workspaceId: string }
-    if (!workspaceId || typeof workspaceId !== 'string') {
-        throw new BadRequestError('Invalid workspace ID')
-    }
-
-    const { name } = req.body as { name?: string }
-    if (!name) {
-        throw new BadRequestError('At least one of name or slug must be provided')
-    }
+    const { name } = ValidationService.validateBody(req.body, updateWorkspaceSchema)
 
     const [workspace] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1)
 
@@ -207,23 +179,23 @@ export const updateWorkspace = AsyncHandler(async (req: Request, res: Response):
     }
 
     function generateSlug(name: string): string {
-        return name.toLowerCase().replace(/\s+/g, '-') // simple slug generation
+        return name.toLowerCase().replace(/\s+/g, '-') + '-' + Date.now() // simple slug generation
     }
 
-    const [doesSlugExist] = await db
-        .select()
-        .from(workspaces)
-        .where(eq(workspaces.slug, generateSlug(name)))
-        .limit(1)
+    const newSlug = generateSlug(name || workspace.name)
+
+    // Check if the new slug is already in use
+    const [doesSlugExist] = await db.select().from(workspaces).where(eq(workspaces.slug, newSlug)).limit(1)
     if (doesSlugExist) {
         throw new BadRequestError('Slug already in use, please choose a different name')
     }
 
+    // Update the workspace
     const [updatedWorkspace] = await db
         .update(workspaces)
         .set({
             name: name || workspace.name,
-            slug: generateSlug(name || workspace.name),
+            slug: newSlug,
             updatedAt: new Date()
         })
         .where(eq(workspaces.id, workspaceId))
@@ -244,11 +216,9 @@ export const getWorkspaceStorageUsage = AsyncHandler(async (req: Request, res: R
         throw new UnauthorizedError('User not authenticated')
     }
 
-    const { workspaceId } = req.params as { workspaceId: string }
-    if (!workspaceId || typeof workspaceId !== 'string') {
-        throw new BadRequestError('Invalid workspace ID')
-    }
+    const { workspaceId } = ValidationService.validateParams(req.params, WorkspaceIdSchema)
 
+    // Verify that the user is a member of the workspace
     const [workspace] = await db
         .select()
         .from(workspaces)
@@ -258,6 +228,7 @@ export const getWorkspaceStorageUsage = AsyncHandler(async (req: Request, res: R
         throw new NotFoundError('Workspace not found')
     }
 
+    // Check if the user is a member of the workspace
     const [membership] = await db
         .select()
         .from(workspaceMembers)
@@ -275,6 +246,11 @@ export const getWorkspaceStorageUsage = AsyncHandler(async (req: Request, res: R
         .from(users)
         .innerJoin(tiers, eq(users.tierId, tiers.id))
         .where(eq(users.id, userId))
+        .limit(1)
+
+    if (!subscriptionTier) {
+        throw new NotFoundError('Subscription tier not found')
+    }
 
     const storageResponse = {
         currentStorageBytes: workspace.currentStorageBytes,

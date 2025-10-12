@@ -1,3 +1,1 @@
-export class WorkspaceService {
-    static async createWorkspace() {}
-}
+export class WorkspaceService {}
