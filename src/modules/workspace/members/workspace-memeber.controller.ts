@@ -3,19 +3,24 @@ import { Request, Response } from 'express'
 import { and, count, eq } from 'drizzle-orm'
 
 import { db } from '@/core/db'
-import { Permission, workspaceMembers, workspaces } from '@/core/db/schema/workspace.schema'
+import { workspaceMembers, workspaces } from '@/core/db/schema'
 import { users } from '@/core/db/schema'
 import { AsyncHandler } from '@/core/http/asyncHandler'
 
+import { ValidationService } from '@/modules/shared/validation.service'
 import { ApiResponse, BadRequestError, UnauthorizedError } from '@/util'
-import { TierService } from '@/modules/shared/tier.service'
+
+import { WorkspaceIdSchema } from '../workspace.validator'
+import { addWorkspaceMemberSchema, updateMemberPermissionSchema, WorkspaceMemberSchema } from './workspace-members.validator'
+// import { logger } from '@/config/logger'
+import { logger } from './../../../config/logger'
 
 // Retrieves all members of a workspace with their permissions.
 export const getWorkspaceMembers = AsyncHandler(async (req: Request, res: Response): Promise<void> => {
     const { userId } = getAuth(req)
     if (!userId) throw new UnauthorizedError('User not authenticated')
 
-    const { workspaceId } = req.params as { workspaceId: string }
+    const { workspaceId } = ValidationService.validateParams(req.params, WorkspaceIdSchema)
 
     // step 1 validate user has access to workspace
     const [userAccess] = await db
@@ -31,17 +36,20 @@ export const getWorkspaceMembers = AsyncHandler(async (req: Request, res: Respon
     // step 2 query workspace members with join to users table
     const members = await db
         .select({
-            memeberId: workspaceMembers.id,
+            // workspace member details
+            memberId: workspaceMembers.id,
             permissions: workspaceMembers.permission,
             joinedAt: workspaceMembers.joinedAt,
             updatedAt: workspaceMembers.updatedAt,
 
+            // user details
             userId: users.id,
             email: users.email,
             firstName: users.firstName,
             lastName: users.lastName,
             avatarImage: users.avatarImage,
 
+            // workspace owner id for isOwner check
             workspaceOwnerId: workspaces.ownerId
         })
         .from(workspaceMembers)
@@ -53,7 +61,7 @@ export const getWorkspaceMembers = AsyncHandler(async (req: Request, res: Respon
     if (!members) throw new BadRequestError('No members found for this workspace')
 
     const membersWithPermissions = members.map((member) => ({
-        id: member.userId,
+        id: member.memberId,
         user: {
             id: member.userId,
             email: member.email,
@@ -69,52 +77,61 @@ export const getWorkspaceMembers = AsyncHandler(async (req: Request, res: Respon
 })
 
 // Adds an existing user to a workspace (after invitation acceptance).
-export const addWorkspaceMember = AsyncHandler(async (req: Request, res: Response): Promise<void> => {
+export const addMemberToWorkspace = AsyncHandler(async (req: Request, res: Response): Promise<void> => {
     const { userId } = getAuth(req)
     if (!userId) throw new UnauthorizedError('User not authenticated')
 
-    const { workspaceId } = req.params as { workspaceId: string }
-    if (!workspaceId) throw new BadRequestError('Workspace ID is required')
+    const { workspaceId } = ValidationService.validateParams(req.params, WorkspaceIdSchema)
+    const { newUserToAdd, permission } = ValidationService.validateBody(req.body, addWorkspaceMemberSchema)
 
-    const { userToAddId, permission } = req.body as { userToAddId: string; permission: Permission }
+    // Extract the tier info from the request
+    if (!req.tier) throw new BadRequestError('Workspace member limit not found')
+    const { membersPerWorkspaceLimit } = req.tier
 
     // step 1 validate user has access as owner to workspace
-    const [workspaceOwner] = await db
+    const [ws] = await db
         .select({
             id: workspaces.id,
-            ownerId: workspaces.ownerId,
-
-            // count current members
-            memberCount: count(workspaceMembers.id)
+            ownerId: workspaces.ownerId
         })
         .from(workspaces)
-        .innerJoin(workspaceMembers, eq(workspaces.id, workspaceMembers.workspaceId))
-        .where(and(eq(workspaces.id, workspaceId), eq(workspaces.ownerId, userId)))
+        .where(and(eq(workspaces.id, workspaceId)))
         .limit(1)
 
-    if (!workspaceOwner) throw new BadRequestError('Only workspace owners can add members')
+    if (!ws) throw new BadRequestError('Workspace not found')
+    if (ws.ownerId !== userId) throw new BadRequestError('Only workspace owners can add members')
 
-    // step 2 check if user tier allows more members
-    const [userTier] = await db
+    // step 2 validate new user exists on platform
+    const [newUser] = await db.select().from(users).where(eq(users.id, newUserToAdd)).limit(1)
+    if (!newUser) throw new BadRequestError('User does not exist on platform')
+    if (newUser.id === userId) throw new BadRequestError('Workspace owners cannot add themselves as members')
+
+    // step 3 check current member count against tier limit
+    const [countRow] = await db
         .select({
-            subscriptionTier: users.tierId
+            count: count(workspaceMembers.id)
         })
-        .from(users)
-        .where(eq(users.id, userId))
+        .from(workspaceMembers)
+        .where(eq(workspaceMembers.workspaceId, workspaceId))
         .limit(1)
-
-    if (!userTier) throw new BadRequestError('User tier not found')
-
-    const tierDetails = await TierService.getTierById(userTier.subscriptionTier)
-    if (!tierDetails) throw new BadRequestError('Tier details not found')
-
-    if (tierDetails.membersPerWorkspaceLimit < workspaceOwner.memberCount) {
+    const currentMemberCount = countRow ? Number(countRow.count) : 0
+    if (currentMemberCount >= membersPerWorkspaceLimit) {
         throw new BadRequestError('Workspace member limit exceeded')
     }
 
+    // check user is not already a member
+    const [existingMember] = await db
+        .select()
+        .from(workspaceMembers)
+        .where(and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.userId, newUserToAdd)))
+        .limit(1)
+
+    if (existingMember) throw new BadRequestError('User is already a member of this workspace')
+
+    // insert new member
     await db.insert(workspaceMembers).values({
         workspaceId,
-        userId: userToAddId,
+        userId: newUserToAdd,
         permission
     })
 
@@ -123,34 +140,31 @@ export const addWorkspaceMember = AsyncHandler(async (req: Request, res: Respons
 
 // Updates a member's permission level in the workspace.
 export const updateMemberPermission = AsyncHandler(async (req: Request, res: Response): Promise<void> => {
-    // - Validates user is owner or has full_access permission
-    // - Cannot modify owner's permission
-    // - Updates permission field in workspace_members
-    // - Updates updated_at timestamp
-    // - Returns updated member object
     const { userId } = getAuth(req)
     if (!userId) throw new UnauthorizedError('User not authenticated')
 
-    const { workspaceId } = req.params as { workspaceId: string }
-    if (!workspaceId) throw new BadRequestError('Workspace ID is required')
+    // Validate and extract workspaceId from params
+    const { workspaceId, memberId } = ValidationService.validateParams(req.params, WorkspaceMemberSchema)
+    // Validate and extract memberId and newPermission from body
+    const { newPermission } = ValidationService.validateBody(req.body, updateMemberPermissionSchema)
 
-    const { memberId, newPermission } = req.body as { memberId: string; newPermission: Permission }
-    if (!memberId || !newPermission) throw new BadRequestError('Member ID and new permission are required')
+    // Ensure workspaceId and memberId are provided
+    const [workspace] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1)
 
-    const [workspace] = await db
-        .select()
-        .from(workspaces)
-        .where(and(eq(workspaces.id, workspaceId), eq(workspaces.ownerId, userId)))
+    if (!workspace) throw new BadRequestError('Workspace not found')
+    logger.info(`userID: ${userId}, owned by ${workspace.ownerId}`)
 
-    if (!workspace) throw new BadRequestError('Only workspace owners can update member permissions')
+    if (workspace.ownerId !== userId) throw new BadRequestError('Only workspace owners can update member permissions')
 
     const [member] = await db
         .select()
         .from(workspaceMembers)
-        .where(and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.userId, memberId)))
+        .where(and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.id, memberId)))
+        .limit(1)
 
     if (!member) throw new BadRequestError('Member not found in this workspace')
 
+    // Update the member's permission and updatedAt timestamp
     await db
         .update(workspaceMembers)
         .set({
@@ -171,20 +185,11 @@ export const updateMemberPermission = AsyncHandler(async (req: Request, res: Res
 })
 
 // Removes a member from the workspace.
-export const removeWorkspaceMember = AsyncHandler(async (req: Request, res: Response): Promise<void> => {
-    // - Validates user is owner or has full_access permission
-    // - Cannot remove workspace owner
-    // - Deletes workspace_members record
-    // - Logs activity
-    // - Returns success confirmation
+export const removeMemberFromWorkspace = AsyncHandler(async (req: Request, res: Response): Promise<void> => {
     const { userId } = getAuth(req)
     if (!userId) throw new UnauthorizedError('User not authenticated')
 
-    const { workspaceId } = req.params as { workspaceId: string }
-    if (!workspaceId) throw new BadRequestError('Workspace ID is required')
-
-    const { memberId } = req.body as { memberId: string }
-    if (!memberId) throw new BadRequestError('Member ID is required')
+    const { workspaceId, memberId } = ValidationService.validateParams(req.params, WorkspaceMemberSchema)
 
     const [workspace] = await db
         .select()
@@ -198,23 +203,41 @@ export const removeWorkspaceMember = AsyncHandler(async (req: Request, res: Resp
     // cannot remove owner
     if (workspace.ownerId === memberId) throw new BadRequestError('Cannot remove the workspace owner')
 
-    await db.delete(workspaceMembers).where(and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.userId, memberId)))
+    const [member] = await db
+        .select()
+        .from(workspaceMembers)
+        .where(and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.id, memberId)))
+        .limit(1)
+
+    if (!member) throw new BadRequestError('Member not found in this workspace')
+
+    await db.delete(workspaceMembers).where(eq(workspaceMembers.id, member.id))
 
     return ApiResponse(req, res, 200, 'Member removed from workspace successfully', null)
 })
 
 // Allows a member to leave a workspace they don't own.
-export const leaveWorkspace = AsyncHandler(async (req: Request, res: Response): Promise<void> => {
+export const existMemberFromWorkspace = AsyncHandler(async (req: Request, res: Response): Promise<void> => {
     const { userId } = getAuth(req)
     if (!userId) throw new UnauthorizedError('User not authenticated')
 
-    const { workspaceId } = req.params as { workspaceId: string }
-    if (!workspaceId) throw new BadRequestError('Workspace ID is required')
+    const { workspaceId } = ValidationService.validateParams(req.params, WorkspaceIdSchema)
 
+    // check workspace exists
     const [workspace] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1)
     if (!workspace) throw new BadRequestError('Workspace not found')
 
+    logger.info(`userID: ${userId}, owned by ${workspace.ownerId}`)
+    // cannot leave if owner
     if (workspace.ownerId === userId) throw new BadRequestError('Workspace owners cannot leave their own workspace')
+
+    // check user is a member
+    const [member] = await db
+        .select()
+        .from(workspaceMembers)
+        .where(and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.userId, userId)))
+        .limit(1)
+    if (!member) throw new BadRequestError('User is not a member of this workspace')
 
     await db.delete(workspaceMembers).where(and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.userId, userId)))
 
