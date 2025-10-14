@@ -10,7 +10,7 @@ import { workspaceMembers, workspaces } from '@/core/db/schema'
 import { ApiResponse, BadRequestError, NotFoundError, UnauthorizedError } from '@/util'
 import { ValidationService } from '../shared/validation.service'
 
-import { createWorkspaceSchema, updateWorkspaceSchema, WorkspaceIdSchema } from './workspace.schema'
+import { createWorkspaceSchema, updateWorkspaceSchema, WorkspaceIdSchema } from './workspace.validator'
 import { CreateWorkspaceBody } from './workspaces.types'
 
 // Creates a new workspace owned by the authenticated user. Each user can only create ONE workspace.
@@ -156,6 +156,27 @@ export const getWorkspaceById = AsyncHandler(async (req: Request, res: Response)
     }
 
     return ApiResponse(req, res, 200, 'Workspace retrieved successfully', workspaceResponse)
+})
+
+export const getLoggedInUserWorkspace = AsyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const { userId } = getAuth(req)
+    if (!userId) {
+        throw new UnauthorizedError('User not authenticated')
+    }
+
+    const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1)
+    if (!user) {
+        throw new NotFoundError('User not found')
+    }
+
+    const [workspace] = await db.select().from(workspaces).where(eq(workspaces.ownerId, userId)).limit(1)
+    if (!workspace) {
+        throw new NotFoundError('Workspace not found for this user')
+    }
+
+    return ApiResponse(req, res, 200, 'User workspace retrieved successfully', {
+        workspace
+    })
 })
 
 // Updates workspace name and slug.
