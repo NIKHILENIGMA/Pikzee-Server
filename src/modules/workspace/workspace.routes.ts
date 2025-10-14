@@ -1,16 +1,21 @@
 import { Router } from 'express'
-import { clerkAuth } from '../../core/auth/clerk'
-import * as controller from './workspace.controller'
-import membersRoutes from './members/workspace-memeber.routes'
+import { clerkAuth } from '@/core/auth/clerk'
 import { attachUserAndTier } from '@/middlewares/checkTier.middleware'
 
-const workspaceRouter = Router()
+import membersRoutes from './members/workspace-memeber.routes'
+import * as controller from './workspace.controller'
+
+const workspaceRouter = Router({
+    mergeParams: true
+})
 
 // Workspaces
 workspaceRouter
     .route('/')
     .post(clerkAuth, attachUserAndTier, controller.createWorkspace) // Create new workspace
     .get(clerkAuth, controller.getUserWorkspaces) // Get all workspaces for user
+
+workspaceRouter.route('/current-workspace').get(clerkAuth, controller.getLoggedInUserWorkspace) // Get current user's workspace
 
 workspaceRouter
     .route('/:workspaceId')
