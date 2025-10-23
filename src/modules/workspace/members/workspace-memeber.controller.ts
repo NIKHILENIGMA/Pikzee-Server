@@ -7,7 +7,7 @@ import { workspaceMembers, workspaces } from '@/core/db/schema'
 import { users } from '@/core/db/schema'
 import { AsyncHandler } from '@/lib'
 
-import { ValidationService } from '@/modules/shared/validation.service'
+import { ValidationService } from '@/shared/validation.service'
 import { ApiResponse, BadRequestError, UnauthorizedError } from '@/util'
 
 import { WorkspaceIdSchema } from '../workspace.validator'

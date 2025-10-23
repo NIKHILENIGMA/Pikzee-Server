@@ -6,7 +6,7 @@ import { db, tiers, users, workspaceMembers, workspaces } from '@/core'
 import { AsyncHandler } from '@/lib'
 import { ApiResponse, BadRequestError, NotFoundError, UnauthorizedError } from '@/util'
 
-import { ValidationService } from '../shared/validation.service'
+import { ValidationService } from '@/shared/validation.service'
 
 import { createWorkspaceSchema, updateWorkspaceSchema, WorkspaceIdSchema } from './workspace.validator'
 import { CreateWorkspaceBody } from './workspaces.types'
