@@ -2,12 +2,10 @@ import { getAuth } from '@clerk/express'
 import { and, eq } from 'drizzle-orm'
 import { Request, Response } from 'express'
 
-import { db } from '@/core/db'
-import { tiers, users } from '@/core/db/schema'
+import { db, tiers, users, workspaceMembers, workspaces } from '@/core'
 import { AsyncHandler } from '@/lib'
-import { workspaceMembers, workspaces } from '@/core/db/schema'
-
 import { ApiResponse, BadRequestError, NotFoundError, UnauthorizedError } from '@/util'
+
 import { ValidationService } from '../shared/validation.service'
 
 import { createWorkspaceSchema, updateWorkspaceSchema, WorkspaceIdSchema } from './workspace.validator'

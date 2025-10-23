@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from 'express'
-import { APP_CONFIG } from '../config'
+import { IS_PRODUCTION } from '../config'
 import { StandardError } from '../util'
 
 /**
@@ -43,7 +43,7 @@ export const errorHandler = (err: Error | StandardError, req: Request, res: Resp
         message: 'The server encountered an error while processing your request.',
         data: null,
         errors: [{ message: 'Internal Server Error' }],
-        trace: APP_CONFIG.IS_PRODUCTION ? undefined : { error: err.stack }
+        trace: IS_PRODUCTION ? undefined : { error: err.stack }
     }
 
     // Check if the error is an instance of StandardError or a generic Error
@@ -57,7 +57,7 @@ export const errorHandler = (err: Error | StandardError, req: Request, res: Resp
     }
 
     // Remove sensitive information in production
-    if (APP_CONFIG.IS_PRODUCTION) {
+    if (IS_PRODUCTION) {
         delete errorResponse.trace
         delete errorResponse.request['user-agent']
         delete errorResponse.request.ip

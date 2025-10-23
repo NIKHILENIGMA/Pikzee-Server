@@ -1,3 +1,3 @@
-import { db } from './drizzle'
-
-export { db }
+export * from './drizzle'
+export * from './schema'
+export * from './seeds'

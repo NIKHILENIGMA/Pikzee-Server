@@ -7,9 +7,9 @@ import compression from 'compression'
 import { clerkMiddleware } from '@clerk/express'
 import 'source-map-support/register'
 
-import { APP_CONFIG } from './config'
+import { CORS_METHODS, CORS_ORIGIN, IS_PRODUCTION } from '@/config'
 import { authWebhookRouter } from './modules/auth'
-import routes from '@/core/http/router'
+import router from '@/core'
 import { errorHandler, notFound } from '@/middlewares'
 
 const createApp = (): Application => {
@@ -18,8 +18,8 @@ const createApp = (): Application => {
     // Middleware
     app.use(
         cors({
-            origin: APP_CONFIG.CORS_ORIGIN, // Allow all origins by default
-            methods: APP_CONFIG.CORS_METHODS,
+            origin: CORS_ORIGIN, // Allow all origins by default
+            methods: CORS_METHODS,
             credentials: true
         })
     )
@@ -32,14 +32,14 @@ const createApp = (): Application => {
     app.use(express.urlencoded({ extended: true, limit: '5mb' })) // Limit URL-encoded body size to 5mb
     app.use(express.static('public')) // Serve static files from 'public' directory
 
-    if (APP_CONFIG.IS_PRODUCTION) {
+    if (IS_PRODUCTION) {
         app.use(morgan('combined')) // Use 'combined' format in production
     } else {
         app.use(morgan('dev')) // Use 'dev' format in development
     }
 
     // Routes
-    app.use('/api/v1', routes)
+    app.use('/api/v1', router)
     app.get('/health', (_req, res) => {
         res.status(200).send('OK')
     })

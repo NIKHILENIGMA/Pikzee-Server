@@ -1,6 +1,6 @@
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool, type PoolConfig } from 'pg'
-import { APP_CONFIG } from '@/config'
+import { DATABASE_URL } from '@/config'
 import * as schema from './schema'
 import { logger } from '@/config/logger'
 
@@ -20,7 +20,7 @@ import { logger } from '@/config/logger'
  */
 
 const config: PoolConfig = {
-    connectionString: APP_CONFIG.DATABASE_URL,
+    connectionString: DATABASE_URL,
     max: 20,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 2000

@@ -1,11 +1,10 @@
-import { Request, Response } from 'express'
-import { ApiResponse, InternalServerError, NotFoundError, StandardError } from '@/util'
-import { Webhook } from 'svix'
-import { CLERK_WEBHOOK_SECRET } from '@/config/clerk'
 import type { WebhookEvent } from '@clerk/express'
-import { logger } from '@/config/logger'
-import { db } from '@/core/db'
-import { users } from '@/core/db/schema/users.schema'
+import { Request, Response } from 'express'
+import { Webhook } from 'svix'
+
+import { db, users } from '@/core'
+import { logger, CLERK_WEBHOOK_SECRET } from '@/config'
+import { ApiResponse, InternalServerError, NotFoundError, StandardError } from '@/util'
 
 export const onboardingUser = async (req: Request, res: Response) => {
     const svixId = req.headers['svix-id'] as string

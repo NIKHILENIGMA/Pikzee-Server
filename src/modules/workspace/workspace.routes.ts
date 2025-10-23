@@ -1,6 +1,7 @@
 import { Router } from 'express'
-import { clerkAuth } from '@/core/auth/clerk'
-import { attachUserAndTier } from '@/middlewares/checkTier.middleware'
+
+import { clerkAuth } from '@/core'
+import { attachUserAndTier } from '@/middlewares'
 
 import membersRoutes from './members/workspace-memeber.routes'
 import * as controller from './workspace.controller'

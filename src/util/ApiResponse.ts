@@ -1,6 +1,6 @@
 import { Request, Response } from 'express'
 import { THttpResponse } from '../types/api/response.types'
-import { APP_CONFIG } from '../config'
+import { IS_PRODUCTION } from '../config'
 
 /**
  * Sends a standardized API response.
@@ -27,7 +27,7 @@ export const ApiResponse = (req: Request, res: Response, responseStatusCode: num
         data: data
     }
 
-    if (APP_CONFIG.IS_PRODUCTION) {
+    if (IS_PRODUCTION) {
         delete response.request.ip
     }
 

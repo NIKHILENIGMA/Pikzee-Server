@@ -1,14 +1,13 @@
 import 'tsconfig-paths/register'
 import createApp from './app'
-import { APP_CONFIG } from './config'
-import { logger } from './config/logger'
+import { logger, NODE_ENV, PORT } from '@/config'
 
 const server = () => {
     const app = createApp()
 
     // Start server
-    app.listen(APP_CONFIG.PORT, () => {
-        logger.info(`Server running on port ${APP_CONFIG.PORT} in ${APP_CONFIG.NODE_ENV} mode`)
+    app.listen(PORT, () => {
+        logger.info(`Server running on port ${PORT} in ${NODE_ENV} mode`)
     })
 }
 
