@@ -1,5 +1,5 @@
 import z from 'zod'
-import { createWorkspaceSchema, updateWorkspaceSchema } from './workspace.validator'
+import { createWorkspaceSchema, updateWorkspaceSchema } from '@/shared'
 
 export type CreateWorkspaceBody = z.infer<typeof createWorkspaceSchema>
 

@@ -4,11 +4,9 @@ import { Request, Response } from 'express'
 
 import { db, tiers, users, workspaceMembers, workspaces } from '@/core'
 import { AsyncHandler } from '@/lib'
+import { createWorkspaceSchema, updateWorkspaceSchema, WorkspaceIdSchema, ValidationService } from '@/shared'
 import { ApiResponse, BadRequestError, NotFoundError, UnauthorizedError } from '@/util'
 
-import { ValidationService } from '@/shared/validation.service'
-
-import { createWorkspaceSchema, updateWorkspaceSchema, WorkspaceIdSchema } from './workspace.validator'
 import { CreateWorkspaceBody } from './workspaces.types'
 import { WorkspaceMemberDto, WorkspaceResponseDto, WorkspacesResponseDto, WorkspaceStorageResponseDto } from './workspace.dto'
 

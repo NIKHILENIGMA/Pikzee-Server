@@ -2,18 +2,11 @@ import { getAuth } from '@clerk/express'
 import { Request, Response } from 'express'
 import { and, count, eq } from 'drizzle-orm'
 
-import { db } from '@/core/db'
-import { workspaceMembers, workspaces } from '@/core/db/schema'
-import { users } from '@/core/db/schema'
+import { db, workspaceMembers, workspaces, users } from '@/core'
+import { logger } from '@/config'
 import { AsyncHandler } from '@/lib'
-
-import { ValidationService } from '@/shared/validation.service'
+import { ValidationService, WorkspaceIdSchema, addWorkspaceMemberSchema, updateMemberPermissionSchema, WorkspaceMemberSchema } from '@/shared'
 import { ApiResponse, BadRequestError, UnauthorizedError } from '@/util'
-
-import { WorkspaceIdSchema } from '../workspace.validator'
-import { addWorkspaceMemberSchema, updateMemberPermissionSchema, WorkspaceMemberSchema } from './workspace-members.validator'
-// import { logger } from '@/config/logger'
-import { logger } from './../../../config/logger'
 
 // Retrieves all members of a workspace with their permissions.
 export const getWorkspaceMembers = AsyncHandler(async (req: Request, res: Response): Promise<void> => {
