@@ -3,6 +3,8 @@ import { relations } from 'drizzle-orm'
 
 import { tiers } from './subscription.schema'
 
+// todo: add last_active_workspace_id field to track last active workspace
+
 export const users = pgTable('users', {
     id: varchar('id', { length: 100 }).notNull().primaryKey(),
     firstName: varchar('first_name', { length: 100 }),
