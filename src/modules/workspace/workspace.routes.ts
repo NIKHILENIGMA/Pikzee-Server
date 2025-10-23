@@ -15,8 +15,6 @@ workspaceRouter
     .post(clerkAuth, attachUserAndTier, controller.createWorkspace) // Create new workspace
     .get(clerkAuth, controller.getUserWorkspaces) // Get all workspaces for user
 
-workspaceRouter.route('/current-workspace').get(clerkAuth, controller.getLoggedInUserWorkspace) // Get current user's workspace
-
 workspaceRouter
     .route('/:workspaceId')
     .get(clerkAuth, controller.getWorkspaceById) // Get workspace by ID

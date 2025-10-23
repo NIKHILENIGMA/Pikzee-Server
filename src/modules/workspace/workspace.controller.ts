@@ -1,5 +1,5 @@
 import { getAuth } from '@clerk/express'
-import { and, eq, count } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { Request, Response } from 'express'
 
 import { db } from '@/core/db'
@@ -12,6 +12,7 @@ import { ValidationService } from '../shared/validation.service'
 
 import { createWorkspaceSchema, updateWorkspaceSchema, WorkspaceIdSchema } from './workspace.validator'
 import { CreateWorkspaceBody } from './workspaces.types'
+import { WorkspaceMemberDto, WorkspaceResponseDto, WorkspacesResponseDto, WorkspaceStorageResponseDto } from './workspace.dto'
 
 // Creates a new workspace owned by the authenticated user. Each user can only create ONE workspace.
 export const createWorkspace = AsyncHandler(async (req: Request, res: Response): Promise<void> => {
@@ -45,7 +46,8 @@ export const createWorkspace = AsyncHandler(async (req: Request, res: Response):
                 name: workspaces.name,
                 slug: workspaces.slug,
                 ownerId: workspaces.ownerId,
-                currentStorageBytes: workspaces.currentStorageBytes
+                currentStorageBytes: workspaces.currentStorageBytes,
+                createdAt: workspaces.createdAt
             })
 
         // Add the owner as a member with full access
@@ -58,7 +60,77 @@ export const createWorkspace = AsyncHandler(async (req: Request, res: Response):
         return workspace
     })
 
-    return ApiResponse(req, res, 201, 'Workspace created successfully', newWorkspace)
+    const workspaceResponse: WorkspaceResponseDto = {
+        workspace: {
+            id: newWorkspace.id,
+            name: newWorkspace.name,
+            ownerId: newWorkspace.ownerId,
+            workspaceLogoUrl: null,
+            createdAt: newWorkspace.createdAt
+        }
+    }
+
+    return ApiResponse(req, res, 201, 'Workspace created successfully', workspaceResponse)
+})
+
+// Updates workspace name and slug.
+export const updateWorkspace = AsyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const { userId } = getAuth(req)
+    if (!userId) {
+        throw new UnauthorizedError('User not authenticated')
+    }
+    const { workspaceId } = ValidationService.validateParams(req.params, WorkspaceIdSchema)
+    const { name } = ValidationService.validateBody(req.body, updateWorkspaceSchema)
+
+    const [workspace] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1)
+
+    if (!workspace) {
+        throw new NotFoundError('Workspace not found')
+    }
+
+    if (workspace.ownerId !== userId) {
+        throw new BadRequestError('Only the owner can update the workspace')
+    }
+
+    function generateSlug(name: string): string {
+        return name.toLowerCase().replace(/\s+/g, '-') + '-' + Date.now() // simple slug generation
+    }
+
+    const newSlug = generateSlug(name || workspace.name)
+
+    // Check if the new slug is already in use
+    const [doesSlugExist] = await db.select().from(workspaces).where(eq(workspaces.slug, newSlug)).limit(1)
+    if (doesSlugExist) {
+        throw new BadRequestError('Slug already in use, please choose a different name')
+    }
+
+    // Update the workspace
+    const [updatedWorkspace] = await db
+        .update(workspaces)
+        .set({
+            name: name || workspace.name,
+            slug: newSlug,
+            updatedAt: new Date()
+        })
+        .where(eq(workspaces.id, workspaceId))
+        .returning({
+            id: workspaces.id,
+            name: workspaces.name,
+            slug: workspaces.slug,
+            ownerId: workspaces.ownerId
+        })
+
+    const workspaceResponse: WorkspaceResponseDto = {
+        workspace: {
+            id: updatedWorkspace.id,
+            name: updatedWorkspace.name,
+            ownerId: updatedWorkspace.ownerId,
+            workspaceLogoUrl: null,
+            createdAt: workspace.createdAt
+        }
+    }
+
+    return ApiResponse(req, res, 200, 'Workspace updated successfully', workspaceResponse)
 })
 
 // Retrieves all workspaces where the user is owner or member.
@@ -72,7 +144,6 @@ export const getUserWorkspaces = AsyncHandler(async (req: Request, res: Response
         .select({
             id: workspaces.id,
             name: workspaces.name,
-            slug: workspaces.slug,
             ownerId: workspaces.ownerId,
             workspaceLogo: workspaces.workspaceLogoUrl,
             permission: workspaceMembers.permission,
@@ -86,7 +157,18 @@ export const getUserWorkspaces = AsyncHandler(async (req: Request, res: Response
         throw new NotFoundError('No workspaces found for this user')
     }
 
-    return ApiResponse(req, res, 200, 'Workspaces retrieved successfully', workspacesList)
+    const workspacesResponse: WorkspacesResponseDto = {
+        workspaces: workspacesList.map((ws) => ({
+            id: ws.id,
+            name: ws.name,
+            ownerId: ws.ownerId,
+            workspaceLogoUrl: ws.workspaceLogo,
+            permission: ws.permission,
+            createdAt: ws.joinedAt
+        }))
+    }
+
+    return ApiResponse(req, res, 200, 'Workspaces retrieved successfully', workspacesResponse)
 })
 
 // Retrieves detailed information about a specific workspace.
@@ -138,96 +220,42 @@ export const getWorkspaceById = AsyncHandler(async (req: Request, res: Response)
     if (!workspaceData) {
         throw new NotFoundError('Workspace not found')
     }
-
-    const [membersCountRow] = await db
+    // Get workspace members
+    const members = await db
         .select({
-            noOfMembers: count(workspaceMembers.id)
+            id: users.id,
+            firstName: users.firstName,
+            lastName: users.lastName,
+            avatarUrl: users.avatarImage,
+
+            memberId: workspaceMembers.id,
+            permission: workspaceMembers.permission,
+            joinedAt: workspaceMembers.joinedAt
         })
         .from(workspaceMembers)
-        .where(eq(workspaceMembers.workspaceId, workspaceId))
+        .innerJoin(users, eq(workspaceMembers.userId, users.id)) // Join with users table to get user details
+        .where(eq(workspaceMembers.workspaceId, workspaceId)) // Filter by workspace ID
 
-    const noOfMembers = Number(membersCountRow?.noOfMembers ?? 0)
-
-    const workspaceResponse = {
-        workspace: workspaceData.workspace,
-        owner: workspaceData.owner,
-        numberOfMembers: noOfMembers,
-        memeberShip: membership.permission
+    const workspaceResponse: WorkspaceResponseDto = {
+        workspace: {
+            id: workspaceData.workspace.id,
+            name: workspaceData.workspace.name,
+            ownerId: workspaceData.workspace.ownerId,
+            workspaceLogoUrl: workspaceData.workspace.workspaceLogo,
+            createdAt: workspaceData.workspace.createdAt,
+            members: members.map(
+                (m): WorkspaceMemberDto => ({
+                    memberId: m.memberId,
+                    userId: m.id,
+                    permission: m.permission,
+                    avatar: m.avatarUrl,
+                    joinedAt: m.joinedAt
+                })
+            )
+        }
     }
 
     return ApiResponse(req, res, 200, 'Workspace retrieved successfully', workspaceResponse)
-})
-
-export const getLoggedInUserWorkspace = AsyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const { userId } = getAuth(req)
-    if (!userId) {
-        throw new UnauthorizedError('User not authenticated')
-    }
-
-    const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1)
-    if (!user) {
-        throw new NotFoundError('User not found')
-    }
-
-    const [workspace] = await db.select().from(workspaces).where(eq(workspaces.ownerId, userId)).limit(1)
-    if (!workspace) {
-        throw new NotFoundError('Workspace not found for this user')
-    }
-
-    return ApiResponse(req, res, 200, 'User workspace retrieved successfully', {
-        workspace
-    })
-})
-
-// Updates workspace name and slug.
-export const updateWorkspace = AsyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const { userId } = getAuth(req)
-    if (!userId) {
-        throw new UnauthorizedError('User not authenticated')
-    }
-    const { workspaceId } = ValidationService.validateParams(req.params, WorkspaceIdSchema)
-
-    const { name } = ValidationService.validateBody(req.body, updateWorkspaceSchema)
-
-    const [workspace] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1)
-
-    if (!workspace) {
-        throw new NotFoundError('Workspace not found')
-    }
-
-    if (workspace.ownerId !== userId) {
-        throw new BadRequestError('Only the owner can update the workspace')
-    }
-
-    function generateSlug(name: string): string {
-        return name.toLowerCase().replace(/\s+/g, '-') + '-' + Date.now() // simple slug generation
-    }
-
-    const newSlug = generateSlug(name || workspace.name)
-
-    // Check if the new slug is already in use
-    const [doesSlugExist] = await db.select().from(workspaces).where(eq(workspaces.slug, newSlug)).limit(1)
-    if (doesSlugExist) {
-        throw new BadRequestError('Slug already in use, please choose a different name')
-    }
-
-    // Update the workspace
-    const [updatedWorkspace] = await db
-        .update(workspaces)
-        .set({
-            name: name || workspace.name,
-            slug: newSlug,
-            updatedAt: new Date()
-        })
-        .where(eq(workspaces.id, workspaceId))
-        .returning({
-            id: workspaces.id,
-            name: workspaces.name,
-            slug: workspaces.slug,
-            ownerId: workspaces.ownerId
-        })
-
-    return ApiResponse(req, res, 200, 'Workspace updated successfully', updatedWorkspace)
 })
 
 // Retrieves detailed storage usage breakdown for the workspace.
@@ -273,7 +301,9 @@ export const getWorkspaceStorageUsage = AsyncHandler(async (req: Request, res: R
         throw new NotFoundError('Subscription tier not found')
     }
 
-    const storageResponse = {
+    const workspaceResponse: WorkspaceStorageResponseDto = {
+        id: workspace.id,
+        name: workspace.name,
         currentStorageBytes: workspace.currentStorageBytes,
         storageLimitBytes: subscriptionTier ? subscriptionTier.storageLimitBytes : 0,
         usagePercentage:
@@ -282,5 +312,5 @@ export const getWorkspaceStorageUsage = AsyncHandler(async (req: Request, res: R
                 : 0
     }
 
-    return ApiResponse(req, res, 200, 'Storage usage retrieved successfully', storageResponse)
+    return ApiResponse(req, res, 200, 'Storage usage retrieved successfully', workspaceResponse)
 })
