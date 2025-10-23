@@ -4,7 +4,7 @@ import { Request, Response } from 'express'
 
 import { db } from '@/core/db'
 import { tiers, users } from '@/core/db/schema'
-import { AsyncHandler } from '@/core/http/asyncHandler'
+import { AsyncHandler } from '@/lib'
 import { workspaceMembers, workspaces } from '@/core/db/schema'
 
 import { ApiResponse, BadRequestError, NotFoundError, UnauthorizedError } from '@/util'

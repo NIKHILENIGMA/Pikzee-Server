@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express'
-import { StandardError, InternalServerError } from '../../util'
+import { StandardError, InternalServerError } from '../util'
 
 type AsyncRequestHandler = (req: Request, res: Response, next: NextFunction) => Promise<void>
 

@@ -5,7 +5,7 @@ import { and, count, eq } from 'drizzle-orm'
 import { db } from '@/core/db'
 import { workspaceMembers, workspaces } from '@/core/db/schema'
 import { users } from '@/core/db/schema'
-import { AsyncHandler } from '@/core/http/asyncHandler'
+import { AsyncHandler } from '@/lib'
 
 import { ValidationService } from '@/modules/shared/validation.service'
 import { ApiResponse, BadRequestError, UnauthorizedError } from '@/util'
