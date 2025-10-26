@@ -1,20 +1,27 @@
 {
-    "version": "7",
-    "dialect": "postgresql",
-    "entries": [
-        {
-            "idx": 0,
-            "version": "7",
-            "when": 1759258050548,
-            "tag": "0000_user-and-tier-schema",
-            "breakpoints": true
-        },
-        {
-            "idx": 1,
-            "version": "7",
-            "when": 1760271409347,
-            "tag": "0001_workspace-management",
-            "breakpoints": true
-        }
-    ]
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1759258050548,
+      "tag": "0000_user-and-tier-schema",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1760271409347,
+      "tag": "0001_workspace-management",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1761420768606,
+      "tag": "0002_project-management",
+      "breakpoints": true
+    }
+  ]
 }
