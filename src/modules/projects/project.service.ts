@@ -1,5 +1,5 @@
 import { db, projectAccess, projects, users, workspaces } from '@/core'
-import { and, count, eq } from 'drizzle-orm'
+import { and, count, desc, eq } from 'drizzle-orm'
 
 import { BadRequestError, ConflictError, InternalServerError, NotFoundError, StandardError } from '@/util'
 
@@ -350,16 +350,45 @@ export class ProjectService {
         }
     }
 
-    public static async listProjectsByWorkspaceId(workspaceId: string, page: number = 1, limit: number = 10): Promise<Project[]> {
+    public static async listProjectsByWorkspaceId({
+        workspaceId,
+        userId,
+        page = 1,
+        limit = 10
+    }: {
+        workspaceId: string
+        userId: string
+        page?: number
+        limit?: number
+    }): Promise<(Project & { isAllowed: boolean })[]> {
         try {
-            const projectsList = await db
-                .select()
-                .from(projects)
-                .where(and(eq(projects.workspaceId, workspaceId), eq(projects.isDeleted, false)))
-                .offset((page - 1) * limit)
-                .limit(limit)
+            const maxLimit = Math.min(Math.max(limit, 1), 100)
 
-            return projectsList
+            const projectsList = await db
+                .select({
+                    id: projects.id,
+                    name: projects.name,
+                    workspaceId: projects.workspaceId,
+                    status: projects.status,
+                    isDeleted: projects.isDeleted,
+                    deletedAt: projects.deletedAt,
+                    deletedBy: projects.deletedBy,
+                    createdBy: projects.createdBy,
+                    createdAt: projects.createdAt,
+                    updatedAt: projects.updatedAt,
+                    isAllowed: projectAccess.userId
+                })
+                .from(projects)
+                .leftJoin(projectAccess, and(eq(projects.id, projectAccess.projectId), eq(projectAccess.userId, userId)))
+                .where(and(eq(projects.workspaceId, workspaceId), eq(projects.isDeleted, false)))
+                .orderBy(desc(projects.createdAt))
+                .offset((page - 1) * maxLimit)
+                .limit(maxLimit)
+
+            return projectsList.map((project) => ({
+                ...project,
+                isAllowed: !!project.isAllowed
+            }))
         } catch (error) {
             if (error instanceof StandardError) {
                 throw error
