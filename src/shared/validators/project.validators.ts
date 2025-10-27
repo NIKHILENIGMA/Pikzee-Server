@@ -38,3 +38,14 @@ export const projectAccessSchema = z.object({
 export const projectIdSchema = z.object({
     projectId: uuidSchema('Invalid project ID format')
 })
+
+export const projectQuerySchemaType = z.object({
+    page: z
+        .string()
+        .optional()
+        .transform((val) => (val ? parseInt(val, 10) : 1)),
+    limit: z
+        .string()
+        .optional()
+        .transform((val) => (val ? parseInt(val, 10) : 10))
+})

@@ -1,7 +1,15 @@
 import { Request, Response } from 'express'
 
 import { AsyncHandler } from '@/lib'
-import { createProjectSchema, projectIdSchema, updateProjectSchema, ValidationService, projectBodySchema, projectAccessSchema } from '@/shared'
+import {
+    createProjectSchema,
+    projectIdSchema,
+    updateProjectSchema,
+    ValidationService,
+    projectBodySchema,
+    projectAccessSchema,
+    projectQuerySchemaType
+} from '@/shared'
 import { ApiResponse, BadRequestError, ConflictError, DatabaseError, ForbiddenError, NotFoundError, UnauthorizedError } from '@/util'
 
 import { CreateProjectInput, UpdateProjectInput } from './project.types'
@@ -204,10 +212,23 @@ export const getProjectById = AsyncHandler(async (req: Request, res: Response) =
 })
 
 export const listProjectsByWorkspace = AsyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user?.id
+    if (!userId) throw new UnauthorizedError('User not authenticated')
+
     // Validate request body
     const { workspaceId } = ValidationService.validateBody(req.body, projectBodySchema)
 
-    const projects = await ProjectService.listProjectsByWorkspaceId(workspaceId)
+    // Validate query params for pagination (this will set defaults if not provided)
+    const page: number = ValidationService.validateQuery(req.query, projectQuerySchemaType).page
+    const limit: number = ValidationService.validateQuery(req.query, projectQuerySchemaType).limit
+
+    // Fetch projects
+    const projects = await ProjectService.listProjectsByWorkspaceId({
+        workspaceId,
+        userId,
+        page,
+        limit
+    })
 
     const projectListResponse: ProjectsResponseDto = {
         projects: projects.map((project) => ({
@@ -216,7 +237,8 @@ export const listProjectsByWorkspace = AsyncHandler(async (req: Request, res: Re
             workspaceId: project.workspaceId,
             status: project.status,
             createdBy: project.createdBy,
-            createdAt: project.createdAt
+            createdAt: project.createdAt,
+            hasAccess: project.isAllowed
         }))
     }
 
