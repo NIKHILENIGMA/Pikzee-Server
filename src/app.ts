@@ -40,8 +40,16 @@ const createApp = (): Application => {
 
     // Routes
     app.use('/api/v1', router)
-    app.get('/health', (_req, res) => {
-        res.status(200).send('OK')
+    app.get('/health', (req, res) => {
+        res.status(200).json({
+            status: 'OK',
+            timestamp: new Date().toISOString(),
+            request: {
+                method: req.method,
+                url: req.originalUrl,
+                headers: req.headers
+            }
+        })
     })
     // Not Found Middleware
     app.use(notFound)

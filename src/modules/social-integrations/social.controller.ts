@@ -2,13 +2,10 @@ import { AsyncHandler } from '@/lib'
 import { ApiResponse, BadRequestError, InternalServerError, UnauthorizedError } from '@/util'
 import { Request, Response } from 'express'
 import { IntergrationService } from './social.service'
-import { google } from 'googleapis'
+import { google, youtube_v3 } from 'googleapis'
 import { oauth2Client } from '@/core/storage/google.client'
-// import fs from 'fs'
-// import path from 'path'
-// import fetch from 'node-fetch'
-// import FormData from 'form-data'
-// import { logger } from '@/config/logger'
+import fs from 'fs'
+import axios from 'axios'
 
 export const connectionStatus = AsyncHandler(async (req: Request, res: Response): Promise<void> => {
     const userId = req.user?.id
@@ -111,6 +108,109 @@ interface CompleteUploadReqBody {
     videoId?: string
     error?: string
 }
+
+export const uploadVideoToYouTube = AsyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user?.id
+    if (!userId) throw new UnauthorizedError('User not authenticated')
+    // Validate request body
+    const { title, description, privacyStatus, filePath } = req.body as {
+        title: string
+        description?: string
+        privacyStatus?: 'public' | 'private' | 'unlisted'
+        filePath: string
+    }
+    if (!title) {
+        throw new BadRequestError('Video title is required')
+    }
+    if (!filePath) {
+        throw new BadRequestError('Video file path is required')
+    }
+
+    // Prepare video metadata
+    const videoMetadata: youtube_v3.Schema$Video = {
+        snippet: {
+            title,
+            description: description || ''
+        },
+        status: {
+            privacyStatus: privacyStatus || 'private'
+        }
+    }
+
+    // Initialize OAuth2 client
+
+    // Initialize YouTube API client
+    const youtube = google.youtube({
+        version: 'v3',
+        auth: oauth2Client
+    })
+
+    // Upload video
+    const ytVideo = await youtube.videos.insert({
+        part: ['snippet', 'status'],
+        notifySubscribers: true, // Optional: Notify subscribers about the new video
+        requestBody: videoMetadata,
+        media: {
+            body: fs.createReadStream(filePath) // In a real implementation, this should be a readable stream of the file
+        }
+    })
+
+    //
+    return ApiResponse(req, res, 200, 'Video upload initiated successfully', {
+        uploadId: ytVideo.data,
+        status: 'complete'
+    })
+})
+
+export const initiateResumableUpload = AsyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user?.id
+    if (!userId) throw new UnauthorizedError('User not authenticated')
+
+    const { title, description, privacyStatus, fileSize, mimeType } = req.body as {
+        title: string
+        description?: string
+        privacyStatus?: 'public' | 'private' | 'unlisted'
+        fileSize: number
+        mimeType: string
+    }
+
+    if (!title) {
+        throw new BadRequestError('Video title is required')
+    }
+
+    await axios.post(
+        'https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status,contentDetails',
+        {
+            snippet: {
+                title,
+                description: description || '',
+                categoryId: '22' // People & Blogs
+            },
+            status: {
+                privacyStatus: privacyStatus || 'private',
+                embeddable: true,
+                license: 'youtube'
+            }
+        },
+        {
+            headers: {
+                Authorization: `Bearer ${oauth2Client.credentials.access_token}`,
+                'Content-Type': 'application/json; charset=UTF-8',
+                'X-Upload-Content-Length': fileSize,
+                'X-Upload-Content-Type': mimeType
+            }
+        }
+    )
+
+    // const uploadUrl = youtubeResponse.headers.location
+    // if (!uploadUrl) {
+    //     throw new InternalServerError('Failed to get upload URL from YouTube')
+    // }
+
+    return ApiResponse(req, res, 200, 'Resumable upload initiated successfully', {
+        // uploadUrl: uploadUrl
+    })
+})
 
 export const completeResumableUpload = AsyncHandler(async (req: Request, res: Response) => {
     const userId = req.user?.id
