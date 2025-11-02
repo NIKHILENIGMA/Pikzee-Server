@@ -1,25 +1,26 @@
 services:
     # Backend Service
-    # pikzee-backend:
-    #     container_name: backend-dev
-    #     build:
-    #         context: ..
-    #         dockerfile: ./server/.devcontainer/Dockerfile.app
-    #     command: pnpm run dev
-    #     # command: sleep infinity # Keeps the container running for debugging
-    #     ports:
-    #         - '5000:5000'
-    #     volumes:
-    #         - ../server:/app # Mounts the server code
-    #         - /app/node_modules # Mounts node_modules to avoid overwriting
-    #     env_file:
-    #         - .env
-    #     environment:
-    #         DATABASE_URL: postgres://${DATABASE_USER}:${DATABASE_PASSWORD}@db:5432/${DATABASE_NAME}
-    #         CLERK_SECRET_KEY: ${CLERK_SECRET_KEY}
-    #         NODE_ENV: ${NODE_ENV}
-    #     depends_on:
-    #         - db
+    pikzee-backend:
+        container_name: backend-dev
+        build:
+            context: ../server
+            dockerfile: docker/Dockerfile.app
+        command: pnpm run dev
+        # command: sleep infinity # Keeps the container running for debugging
+        ports:
+            - '5000:5000'
+            - '5555:5555' # For debugging tools
+        volumes:
+            - ../server:/app # Mounts the server code
+            - /app/node_modules # Mounts node_modules to avoid overwriting
+        env_file:
+            - .env
+        environment:
+            DATABASE_URL: postgres://${DATABASE_USER}:${DATABASE_PASSWORD}@db:5432/${DATABASE_NAME}
+            CLERK_SECRET_KEY: ${CLERK_SECRET_KEY}
+            NODE_ENV: ${NODE_ENV}
+        depends_on:
+            - db
 
     db:
         container_name: pikzee-database

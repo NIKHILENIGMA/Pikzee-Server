@@ -1,0 +1,38 @@
+{
+    "name": "Pikzee Backend DevContainer",
+    "dockerComposeFile": "../docker-compose.yml",
+    "service": "pikzee-backend",
+    "workspaceFolder": "/app",
+
+    // Ensures that when you close VSCode, Docker Compose containers stop cleanly
+    "shutdownAction": "stopCompose",
+
+    "customizations": {
+        "vscode": {
+            "settings": {
+                "terminal.integrated.defaultProfile.linux": "bash",
+                "editor.formatOnSave": true,
+                "eslint.workingDirectories": [{ "mode": "auto" }]
+            },
+            "extensions": ["dbaeumer.vscode-eslint", "esbenp.prettier-vscode", "eamodio.gitlens", "Prisma.prisma"]
+        }
+    },
+
+    "remoteUser": "node",
+
+    // Run pnpm install automatically if node_modules is missing
+    "postCreateCommand": "pnpm install",
+
+    "forwardPorts": [5555, 5000],
+
+    "portsAttributes": {
+        "5000": {
+            "label": "Application",
+            "onAutoForward": "notify"
+        },
+        "5555": {
+            "label": "Drizzle Studio",
+            "onAutoForward": "notify"
+        }
+    }
+}

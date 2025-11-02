@@ -1,38 +1,64 @@
-# Node modules
+# ─────────────────────────────────────────────
+# 🚫 GIT AND VCS FILES
+# ─────────────────────────────────────────────
+.git
+.gitignore
+.gitattributes
+.github/
+.gitlab-ci.yml
+
+# ─────────────────────────────────────────────
+# 🧩 NODE DEPENDENCIES
+# ─────────────────────────────────────────────
 node_modules
+pnpm-lock.yaml.backup
+.npmrc
+.pnpm-store
 
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Dependency directories
-jspm_packages/
-
-# Build output
+# ─────────────────────────────────────────────
+# 🧱 BUILD OUTPUT AND CACHE
+# ─────────────────────────────────────────────
 dist
 build
-postgres_data
+coverage
+.cache
+.tmp
+.temp
 
-# Environment files
+# ─────────────────────────────────────────────
+# 🧠 ENVIRONMENT FILES
+# ─────────────────────────────────────────────
 .env
-.env.*
+.env.local
+.env.development
+.env.production
+.env.test
+.env.staging
 
-# OS generated files
+# ─────────────────────────────────────────────
+# 🧰 EDITOR / OS SPECIFIC
+# ─────────────────────────────────────────────
+.vscode
+.idea
+*.swp
+*.swo
+*.log
 .DS_Store
 Thumbs.db
 
-# Docker files
-Dockerfile*
-docker-compose*
+# ─────────────────────────────────────────────
+# 🧪 TEST / CI FILES
+# ─────────────────────────────────────────────
+jest.config.*
+vitest.config.*
+tsconfig.test.json
+*.spec.ts
+*.test.ts
 
-# Misc
-*.swp
-*.swo
-.idea
-.vscode
-*.tgz
-coverage
-.nyc_output
+# ─────────────────────────────────────────────
+# 🧰 DOCKER FILES (SELF-EXCLUSION SAFETY)
+# ─────────────────────────────────────────────
+docker-compose.yml
+Dockerfile
+Dockerfile.*
+.devcontainer/
