@@ -20,7 +20,7 @@
         "format:check": "prettier --check .",
         "format:fix": "prettier --write .",
         "format": "pnpm run format:fix",
-        "clean": "rm -rf dist",
+        "clean": "rm -rf node_modules",
         "prepare": "husky",
         "db:generate": "drizzle-kit generate --config=drizzle.config.ts",
         "db:migrate": "drizzle-kit migrate --config=drizzle.config.ts",
