@@ -7,6 +7,10 @@
     // Ensures that when you close VSCode, Docker Compose containers stop cleanly
     "shutdownAction": "stopCompose",
 
+    "features": {
+        "ghcr.io/devcontainers/features/git:1": {}
+    },
+
     "customizations": {
         "vscode": {
             "settings": {
@@ -21,8 +25,9 @@
     "remoteUser": "node",
 
     // Run pnpm install automatically if node_modules is missing
-    "postCreateCommand": "pnpm install",
+    "postCreateCommand": "git config --global core.fileMode false && git config --global safe.directory /app && pnpm install && pnpm prepare",
 
+    // Forward application and Drizzle Studio ports
     "forwardPorts": [5555, 5000],
 
     "portsAttributes": {
